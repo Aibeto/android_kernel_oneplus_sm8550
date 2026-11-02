@@ -22,23 +22,24 @@ if [ -x "$DEST/bin/clang" ]; then
   "$DEST/bin/clang" --version | head -1
   exit 0
 fi
-
-WORK="$CLANG_ROOT/work-$$"
-mkdir -p "$WORK"
-cd "$WORK"
-git init -q
-git remote add origin https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86.git
-git config core.sparseCheckout true
-printf 'clang-r450784e/*\n' > .git/info/sparse-checkout
-if ! git fetch --depth 1 --filter=blob:none origin "$CLANG_REV"; then
-  echo "== blob:none 不受支持，回退普通浅取" >&2
-  git fetch --depth 1 origin "$CLANG_REV"
+CACHE="$CLANG_ROOT/.cache/clang-prebuilt.git"
+mkdir -p "$CACHE"
+if [ ! -e "$CACHE/HEAD" ]; then
+  git init -q --bare "$CACHE"
 fi
-git checkout -q FETCH_HEAD
-test -x clang-r450784e/bin/clang
-mv clang-r450784e "$DEST"
-cd "$CLANG_ROOT"
-mkdir -p "$CLANG_ROOT/.trash"
-mv "$WORK" "$CLANG_ROOT/.trash/work-$(date +%s)"
+git -C "$CACHE" remote get-url origin >/dev/null 2>&1 ||
+  git -C "$CACHE" remote add origin https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86.git
+
+if ! git -C "$CACHE" cat-file -e "$CLANG_REV^{commit}" 2>/dev/null; then
+  if ! git -C "$CACHE" fetch --depth 1 --filter=blob:none origin "$CLANG_REV"; then
+    echo "== blob:none 不受支持，回退普通浅取" >&2
+    git -C "$CACHE" fetch --depth 1 origin "$CLANG_REV"
+  fi
+fi
+
+# 只导出 clang-r450784e 子树，直接落到 .toolchain/ 下（不建中转目录）
+git -C "$CACHE" archive FETCH_HEAD clang-r450784e | tar -x -C "$CLANG_ROOT"
+
+test -x "$DEST/bin/clang"
 echo "== 已安装: $DEST"
 "$DEST/bin/clang" --version | head -1
