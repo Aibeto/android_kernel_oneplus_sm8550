@@ -1,0 +1,97 @@
+NOTICE
+
+android_kernel_oneplus_sm8550
+Kernel tree for the OnePlus 11 (Qualcomm SM8550, OPPO project 22811, codename
+salami). Forked from OnePlus open source and extended with third-party PD3.0 PPS
+charging support.
+
+1. UPSTREAM
+
+   Repo:    https://github.com/OnePlusOSS/android_kernel_oneplus_sm8550
+   Branch:  oneplus/sm8550_b_16.0.0_oneplus_11
+   Fork point: 8b939bbf6d30
+     Synchronize code for OnePlus CPH2447_16.0.5.1301(EX01), CPH2449_16.0.5.1301,
+     CPH2451_16.0.5.1301 and PHB110_16.0.5.1301. Based on QCOM release TAG
+     AU_LINUX_KERNEL.PLATFORM.2.0.R1.00.00.00.004.146.
+
+   The upstream baseline is Qualcomm msm-5.15 (kalama) plus Android common kernel
+   5.15 (GKI). This tree is 5.15.197.
+
+   Submodules:
+     common/                  OnePlusOSS/android_kernel_common_oneplus_sm8550
+     devicetree/sm8550/       OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8550
+     third_party/AnyKernel3   osm0sis/AnyKernel3
+
+2. WHAT THIS FORK ADDS
+
+   17 commits after the fork point, all written by Aibeto.
+
+   Build and packaging, acddc8fe3bb6 to 26c49bff7753:
+     .gitmodules, .github/workflows/build-gki.yml, scripts/build-gki.sh,
+     scripts/fetch-clang.sh, scripts/setup-tree.sh, scripts/pack_anykernel3.sh,
+     scripts/anykernel.sh, and a stray patch fragment removed from
+     kernel/sched/core.c
+
+   Third-party PPS support, bdd1fc6b2fd0 to current HEAD:
+     tools/dtbo/, tools/pps-dtbo/, tools/pps-build/
+     SUPPORT.md, PPS_HANDOFF.md, PPS_RUNTIME_AUDIT.md, PPS_55W_MIGRATION_PLAN.md
+
+   The charging code changes live in the submodule devicetree/sm8550:
+     4d11ef49  dt: enable third-party PPS for 22811 and add 11V/5A strategy data
+     2a79fb5a  pps: make the v1 PPS engine work on 22811 without a charge pump
+
+3. LICENSE
+
+   Upstream license: GPL-2.0 WITH Linux-syscall-note.
+
+   The upstream license notice, as shipped in COPYING:
+
+       The Linux Kernel is provided under:
+
+           SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
+
+       Being under the terms of the GNU General Public License version 2 only,
+       according with:
+
+           LICENSES/preferred/GPL-2.0
+
+       With an explicit syscall exception, as stated at:
+
+           LICENSES/exceptions/Linux-syscall-note
+
+       In addition, other licenses may also apply. Please see:
+
+           Documentation/process/license-rules.rst
+
+   Full texts: COPYING, LICENSES/preferred/GPL-2.0,
+   LICENSES/exceptions/Linux-syscall-note.
+
+   Files added by this fork are GPL-2.0-only. There is no GPL-3.0 code here. The
+   oplus_chg.ko built from the submodule declares MODULE_LICENSE("GPL v2"), which
+   is required to use GPL-only kernel symbols.
+
+   Upstream files keep their own SPDX headers and copyright notices.
+
+4. THIRD-PARTY COMPONENTS
+
+   dtc              device tree compiler, called by the build scripts
+   e2fsprogs        vendor_dlkm image check and repack, called by scripts
+   AnyKernel3       third_party/AnyKernel3, see its LICENSE
+   mkdtboimg.py     AOSP tool, Apache-2.0, included in tools/dtbo/
+   clang and LLVM   AOSP prebuilt toolchain, .toolchain/clang-r450784e
+   pahole           BTF generation, must be on PATH
+
+   Each component keeps its own license. Only mkdtboimg.py and AnyKernel3 are
+   redistributed in this repository.
+
+5. TRADEMARKS AND DISCLAIMER
+
+   OnePlus, OPPO, Qualcomm and Android are trademarks of their respective
+   owners. This is an unofficial fork, not affiliated with or endorsed by them.
+
+   Flashing dtbo or vendor_dlkm can brick the device. Use at your own risk.
+
+6. DOCUMENTATION
+
+   SUPPORT.md, PPS_HANDOFF.md, PPS_RUNTIME_AUDIT.md, PPS_55W_MIGRATION_PLAN.md
+   in the repository root, and tools/pps-build/BUILD_RECIPE.md for build details.
