@@ -217,3 +217,42 @@ fastboot flash vendor_dlkm vendor_dlkm.img
 - `PPS_55W_MIGRATION_PLAN.md` —— 完整方案、E1~E12 证据链、P0 实测、P0.5 写探针、27W 结果
 - `tools/dtbo/` —— 三个工具
 - 本文件 —— 交接速览
+
+---
+
+## 10. 状态更新（2026-11-02 21:45）
+
+§3 列的未提交改动已经全部入库（子模块 `devicetree/sm8550` + 根仓库），工具链也从
+`artifacts/` 挪进了 `tools/`（`tools/dtbo/`、`tools/pps-dtbo/`、`tools/pps-build/`）。
+本节之后的结论以本节为准。
+
+### 已经跑通的
+
+- PPS 引擎起来了：ADSP 报 `PD_PPS`，region 闸放开（`It support 3rd PPS`），曲线选中 11 V 档
+- VBUS 稳定在 10.5–10.8 V；手工写 `pps_req 11000 5000` 可达 10.95 V，说明 55 W 通路本身成立
+- 停充已解决：无 CP 时 IBUS 用 ADSP 读数（读不到就用电池侧估算），第三方跳过 disconnect voter
+- FCC 阶梯生效：从 5000 mA 起试，被 ADSP 拒绝就下一轮降 1000，目前稳定在 4000 mA
+- 实测（电量 61%）：VBUS 10.49 V / 电池 2.41 A，约 21 W
+
+### 还没到 55 W 的原因（按嫌疑排序）
+
+1. ADSP 按 SOC 降流 —— 61% 时只给 4 A，需要低电量（<30%）复测才能区分
+2. 4 A 是本地硬上限 —— `CHARGE_CONTROL_LIMIT` 和 `BATT_CHG_CTRL_LIM` 都写过，ADSP 仍压回
+3. 框架没进快充态（`chg_type=0x0, fastchg_start:0`），`pd_temp_*` 电流表整个不生效，
+   所以 FCC 必须由 PPS 旁路自己写
+
+### 下一步
+
+- 低电量复测阶梯能否爬到 5000 mA
+- 若仍卡 4000：改走 `USB_VOOC_CHG_PARAM_INFO` 入口，或想办法让框架把第三方 PPS 当快充
+- 改曲线/标量一律改 `tools/pps-dtbo/payload/` 后重建 dtbo，不要手改二进制
+
+### 当前产物
+
+| 产物 | 路径 | 校验 |
+| --- | --- | --- |
+| dtbo | `artifacts/dtbo/out/stage2_scalars_curve/dtbo.img` | 3 016 815 B，sha256 `dadb116be0d1dd46ab774636e63689d270568a4f2daae865425b3e1d4d940eb6`，重跑字节一致 |
+| 模块 | `artifacts/build/out/oplus_chg.ko` | 6 950 328 B，sha256 `5c8de20d5cb4b2be768fb903fcdc9dfc8b7006a8fa0699fabfb0dd638e77fca6`，srcversion `FEA4E24A3BDFB8DB0C73E1C` |
+| vendor_dlkm | `artifacts/build/out/vendor_dlkm_pps.img` | 172 703 744 B，sha256 `0b1c8e9a653cb970d4117ec0ad317f6f910553396d69a8868b3ebe9b87a2fc66`（`--fs stock`） |
+
+刷写：dtbo 在 bootloader 模式刷、vendor_dlkm 在 fastboot 模式刷，都不带槽后缀（默认当前槽）。
