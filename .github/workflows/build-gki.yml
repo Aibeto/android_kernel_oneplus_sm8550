@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# 构建 SM8550（OnePlus 11）原版 GKI 内核镜像。
+#
+# 流程与本地完全一致：直接调用 scripts/build-gki.sh
+#   clang-r450784e + gki_defconfig + ThinLTO -> Image
+# 再用 scripts/anykernel.sh 套 AnyKernel3 模板打刷机包。
+#
+# 产物：Image、Image.gz、AnyKernel3 zip、sha256sums.txt
+
+name: Build stock GKI image (SM8550)
+
+on:
+  workflow_dispatch:
+    inputs:
+      lto:
+        description: "LTO 模式（thin 为官方配置；none 更快但非官方）"
+        type: choice
+        options:
+          - thin
+          - none
+        default: thin
+      package_ak3:
+        description: "打包 AnyKernel3 刷机 zip"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: gki-sm8550-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # OnePlusOSS/kernel_manifest (oneplus/sm8550) 固定的 clang revision
+  CLANG_REV: c420e3ab93e51a2f2ab4f8e8b517463c34a7e8bd
+  CLANG_ROOT: .toolchain
+  OUT_DIR: out
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Checkout GKI common submodule
+        run: git submodule update --init --depth 1 common
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/share/swift /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          sudo apt-get clean
+          df -h /
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential bc bison flex libssl-dev libelf-dev libncurses-dev \
+            dwarves python3 rsync zip unzip zstd lz4 xz-utils cpio
+
+      - name: Cache clang-r450784e
+        id: clang-cache
+        uses: actions/cache@v4
+        with:
+          path: .toolchain/clang-r450784e
+          key: clang-r450784e-c420e3ab-v1
+
+      - name: Fetch clang-r450784e
+        if: steps.clang-cache.outputs.cache-hit != 'true'
+        run: bash scripts/fetch-clang.sh
+
+      - name: Build Image (scripts/build-gki.sh)
+        env:
+          LTO_MODE: ${{ github.event.inputs.lto || 'thin' }}
+        run: |
+          CLANG_DIR="$CLANG_ROOT/clang-r450784e/bin" \
+          OUT="$OUT_DIR" \
+          JOBS="$(nproc)" \
+          THINLTO_JOBS=2 \
+          LTO="$LTO_MODE" \
+          bash scripts/build-gki.sh
+
+      - name: Collect artifacts
+        run: |
+          COMMON_SHA=$(git -C common rev-parse --short=8 HEAD)
+          echo "COMMON_SHA=$COMMON_SHA" >> "$GITHUB_ENV"
+          mkdir -p artifacts
+          cp "$OUT_DIR/arch/arm64/boot/Image" artifacts/Image
+          gzip -9 -c artifacts/Image > artifacts/Image.gz
+          (cd artifacts && sha256sum Image Image.gz > sha256sums.txt)
+          ls -lh artifacts
+
+      - name: Package AnyKernel3
+        if: github.event_name == 'push' || github.event.inputs.package_ak3 == 'true'
+        run: |
+          git clone --depth 1 https://github.com/osm0sis/AnyKernel3.git "$RUNNER_TEMP/ak3"
+          cp scripts/anykernel.sh "$RUNNER_TEMP/ak3/anykernel.sh"
+          cp "$OUT_DIR/arch/arm64/boot/Image" "$RUNNER_TEMP/ak3/Image"
+          cd "$RUNNER_TEMP/ak3"
+          rm -rf .git
+          zip -r9 "$GITHUB_WORKSPACE/artifacts/AnyKernel3_stock_sm8550_$COMMON_SHA.zip" . -x ".git/*"
+          cd "$GITHUB_WORKSPACE/artifacts"
+          sha256sum AnyKernel3_*.zip >> sha256sums.txt
+          cat sha256sums.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gki-stock-sm8550
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Summary
+        env:
+          LTO_MODE: ${{ github.event.inputs.lto || 'thin' }}
+        run: |
+          {
+            echo "## SM8550 stock GKI build"
+            echo ""
+            echo "- commit: $GITHUB_SHA"
+            echo "- common submodule: $(git -C common rev-parse --short=8 HEAD)"
+            echo "- clang: $("$CLANG_ROOT/clang-r450784e/bin/clang" --version | head -1)"
+            echo "- LTO: $LTO_MODE"
+            echo ""
+            echo "Artifacts: Image, Image.gz, AnyKernel3 zip, sha256sums.txt"
+          } >> "$GITHUB_STEP_SUMMARY"
