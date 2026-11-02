@@ -52,8 +52,8 @@ jobs:
           submodules: false
           fetch-depth: 1
 
-      - name: Checkout GKI common submodule
-        run: git submodule update --init --depth 1 common
+      - name: Checkout submodules (common + AnyKernel3)
+        run: git submodule update --init --depth 1 common third_party/AnyKernel3
 
       - name: Free disk space
         run: |
@@ -104,13 +104,11 @@ jobs:
       - name: Package AnyKernel3
         if: github.event_name == 'push' || github.event.inputs.package_ak3 == 'true'
         run: |
-          git clone --depth 1 https://github.com/osm0sis/AnyKernel3.git "$RUNNER_TEMP/ak3"
-          cp scripts/anykernel.sh "$RUNNER_TEMP/ak3/anykernel.sh"
-          cp "$OUT_DIR/arch/arm64/boot/Image" "$RUNNER_TEMP/ak3/Image"
-          cd "$RUNNER_TEMP/ak3"
-          rm -rf .git
-          zip -r9 "$GITHUB_WORKSPACE/artifacts/AnyKernel3_stock_sm8550_$COMMON_SHA.zip" . -x ".git/*"
-          cd "$GITHUB_WORKSPACE/artifacts"
+          IMAGE="$OUT_DIR/arch/arm64/boot/Image" \
+          OUT_DIR="$GITHUB_WORKSPACE/artifacts" \
+          TAG="$COMMON_SHA" \
+          bash scripts/pack_anykernel3.sh
+          cd artifacts
           sha256sum AnyKernel3_*.zip >> sha256sums.txt
           cat sha256sums.txt
 
