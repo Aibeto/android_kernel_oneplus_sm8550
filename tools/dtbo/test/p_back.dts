@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+
+	fragment@0 {
+		target = <&battery_charger>;
+
+		__overlay__ {
+			qcom,pd_input_current_charger_ma = <0x7d0>;
+			oplus,chg_ops = "plat-pmic";
+		};
+	};
+
+	__fixups__ {
+		battery_charger = "/fragment@0:target:0";
+	};
+};

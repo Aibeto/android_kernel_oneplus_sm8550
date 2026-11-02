@@ -1,0 +1,6 @@
+/dts-v1/;
+/plugin/;
+&battery_charger {
+	qcom,pd_input_current_charger_ma = <0x7d0>;
+	oplus,chg_ops = "plat-pmic";
+};

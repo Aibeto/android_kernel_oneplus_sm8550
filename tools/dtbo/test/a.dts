@@ -1,0 +1,2 @@
+/dts-v1/;
+/ { compatible = "test,a"; qcom,pd_input_current_charger_ma = <0x7d0>; };

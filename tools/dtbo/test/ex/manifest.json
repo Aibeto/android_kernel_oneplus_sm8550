@@ -1,0 +1,30 @@
+{
+  "page_size": 4096,
+  "version": 0,
+  "entries": [
+    {
+      "index": 0,
+      "file": "00_id00000000_rev00000000.dtbo",
+      "id": 0,
+      "rev": 0,
+      "custom": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "index": 1,
+      "file": "01_id00000000_rev00000000.dtbo",
+      "id": 0,
+      "rev": 0,
+      "custom": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}
