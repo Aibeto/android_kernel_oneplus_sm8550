@@ -1,0 +1,11 @@
+--- patched_force.dtbo.orig.dts
++++ patched_force.dtbo.new.dts
+@@ -9,7 +9,7 @@
+ 		target = <0x01>;
+ 
+ 		__overlay__ {
+-			existing_u32 = <0x10>;
++			existing_u32 = <0x99>;
+ 			existing_str = "hello";
+ 			existing_bool;
+ 			new_u32 = <0x1234>;

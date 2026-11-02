@@ -1,0 +1,8 @@
+/dts-v1/;
+/ {
+	ref_node {
+		some-ref = <&other>;
+	};
+	other: other {
+	};
+};

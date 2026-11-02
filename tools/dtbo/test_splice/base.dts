@@ -1,0 +1,26 @@
+/dts-v1/;
+
+/ {
+	compatible = "fdt-splice,self-test";
+	#address-cells = <0x01>;
+	#size-cells = <0x01>;
+
+	fragment@0 {
+		target = <0x01>;
+
+		__overlay__ {
+			existing_u32 = <0x10>;
+			existing_str = "hello";
+			existing_bool;
+
+			child@0 {
+				reg = <0x00>;
+				value = <0xaa 0xbb>;
+			};
+
+			child@1 {
+				reg = <0x01>;
+			};
+		};
+	};
+};
